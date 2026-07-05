@@ -1,0 +1,121 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f7f7f8;
+  color: #202124;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.shell {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.toolbar,
+.workspace {
+  background: #ffffff;
+  border: 1px solid #dedede;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+}
+
+h2 {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 12px;
+  border: 1px solid #c7c7c7;
+  border-radius: 6px;
+  font: inherit;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+button {
+  min-width: 96px;
+  padding: 10px 14px;
+  border: 1px solid #6264a7;
+  border-radius: 6px;
+  background: #6264a7;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+}
+
+button[disabled] {
+  border-color: #bdbdbd;
+  background: #d7d7d7;
+  color: #5f6368;
+  cursor: not-allowed;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+pre {
+  min-height: 220px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #dedede;
+  border-radius: 6px;
+  background: #fbfbfb;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 16px;
+  }
+
+  .toolbar,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

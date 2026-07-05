@@ -1,0 +1,101 @@
+openapi: 3.0.3
+info:
+  title: PIM Activation API
+  version: 1.0.0
+  description: Activates an eligible Microsoft Entra PIM role for the signed-in user.
+servers:
+  - url: https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net
+paths:
+  /api/pim/activate:
+    post:
+      operationId: activatePimRole
+      summary: Activate an eligible PIM role
+      description: Activates an allowlisted PIM role for the authenticated user using Microsoft Graph selfActivate.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimActivationRequest"
+            examples:
+              aiReader:
+                summary: Activate AI Reader
+                value:
+                  roleName: AI Reader
+                  durationHours: 2
+                  ticketNumber: Ticket12345
+                  justification: Ticket12345
+      responses:
+        "201":
+          description: PIM role activation was created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "200":
+          description: PIM role was already active.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                alreadyActive:
+                  value:
+                    message: pim is already activated
+        "400":
+          description: Request failed validation or PIM policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing, expired, or invalid bearer token.
+        "403":
+          description: Caller is not authorized by Azure authentication, backend policy, or Microsoft Graph.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PimActivationRequest:
+      type: object
+      required:
+        - roleName
+        - durationHours
+        - ticketNumber
+      properties:
+        roleName:
+          type: string
+          description: Backend allowlisted role name.
+          enum:
+            - AI Reader
+        durationHours:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: Requested activation duration in hours.
+        ticketNumber:
+          type: string
+          description: ConnectWise ticket number. Current backend requires the Ticket prefix.
+          example: Ticket12345
+        justification:
+          type: string
+          description: Business justification sent to Microsoft Graph PIM.
+          example: Ticket12345
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string

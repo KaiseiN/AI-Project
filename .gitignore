@@ -1,0 +1,23 @@
+# Secrets and local settings
+local.settings.json
+.local/
+*.env
+*.env.*
+
+# Python
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Editor and OS noise
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test/build artifacts
+.pytest_cache/
+htmlcov/
+dist/
+build/

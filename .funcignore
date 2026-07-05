@@ -1,0 +1,14 @@
+.git*
+.vscode
+.venv
+.local
+__pycache__
+__pycache__/
+**/__pycache__/**
+*.pyc
+*.pyo
+local.settings.json
+tests
+tools
+README.md
+orchestrator
