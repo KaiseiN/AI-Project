@@ -3,5 +3,6 @@ window.PIM_ORCHESTRATOR_CONFIG = {
   clientId: "2d927dbc-e54f-4e43-a1d9-ab9988006dc6",
   apiScope: "api://2450d4e7-7781-4a1f-885b-710a17d3d31b/pim.activate",
   functionUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/pim/activate",
+  redirectUri: "https://yellow-mushroom-01855d00f.7.azurestaticapps.net/",
   supportedRoles: ["AI Reader"]
 };

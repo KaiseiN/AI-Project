@@ -1,6 +1,6 @@
 (function () {
   const config = window.PIM_ORCHESTRATOR_CONFIG;
-  const redirectUri = `${window.location.origin}/orchestrator/`;
+  const redirectUri = config.redirectUri || `${window.location.origin}/orchestrator/`;
   const authorizeEndpoint = `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/authorize`;
   const tokenEndpoint = `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`;
   const scopes = ["openid", "profile", config.apiScope].join(" ");
