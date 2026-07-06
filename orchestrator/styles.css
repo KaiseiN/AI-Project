@@ -93,6 +93,18 @@ button[disabled] {
   margin-top: 20px;
 }
 
+.confirmation {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid #c8d7f2;
+  border-radius: 6px;
+  background: #f6f9ff;
+}
+
+.confirmation p {
+  margin-top: 6px;
+}
+
 pre {
   min-height: 220px;
   margin: 0;

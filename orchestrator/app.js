@@ -12,6 +12,8 @@
     promptInput: document.getElementById("promptInput"),
     extractButton: document.getElementById("extractButton"),
     activateButton: document.getElementById("activateButton"),
+    confirmationPanel: document.getElementById("confirmationPanel"),
+    confirmationText: document.getElementById("confirmationText"),
     payloadOutput: document.getElementById("payloadOutput"),
     resultOutput: document.getElementById("resultOutput")
   };
@@ -70,6 +72,7 @@
     currentPayload = null;
     elements.payloadOutput.textContent = "{}";
     elements.resultOutput.textContent = "Signed out.";
+    renderConfirmation();
     renderAuthState();
   }
 
@@ -186,13 +189,14 @@
     try {
       currentPayload = extractIntentLocally(elements.promptInput.value);
       elements.payloadOutput.textContent = JSON.stringify(currentPayload, null, 2);
-      elements.resultOutput.textContent = "Payload ready. Review it, then activate PIM.";
+      elements.resultOutput.textContent = "Review the activation details, then activate PIM.";
     } catch (error) {
       currentPayload = null;
       elements.payloadOutput.textContent = "{}";
       elements.resultOutput.textContent = error.message;
     }
 
+    renderConfirmation();
     renderAuthState();
   }
 
@@ -230,14 +234,7 @@
         ? await response.json()
         : await response.text();
 
-      elements.resultOutput.textContent = JSON.stringify(
-        {
-          status: response.status,
-          body: responseBody
-        },
-        null,
-        2
-      );
+      elements.resultOutput.textContent = formatActivationResult(response.status, responseBody);
     } catch (error) {
       elements.resultOutput.textContent = buildFetchErrorMessage(error);
     } finally {
@@ -260,6 +257,37 @@
     }
 
     return error.message;
+  }
+
+  function renderConfirmation() {
+    if (!currentPayload) {
+      elements.confirmationPanel.hidden = true;
+      elements.confirmationText.textContent = "";
+      return;
+    }
+
+    elements.confirmationPanel.hidden = false;
+    elements.confirmationText.textContent =
+      `${currentPayload.roleName} will be activated for ${currentPayload.durationHours} ` +
+      `${currentPayload.durationHours === 1 ? "hour" : "hours"} using ${currentPayload.ticketNumber}.`;
+  }
+
+  function formatActivationResult(status, body) {
+    if (status === 200 && body && body.message === "pim is already activated") {
+      return `${currentPayload.roleName} is already active.`;
+    }
+
+    if (status === 201 && body && body.status === "Provisioned") {
+      return [
+        `${currentPayload.roleName} is active for ${currentPayload.durationHours} ` +
+          `${currentPayload.durationHours === 1 ? "hour" : "hours"} using ${currentPayload.ticketNumber}.`,
+        "",
+        `Request ID: ${body.id}`,
+        `PIM status: ${body.status}`
+      ].join("\n");
+    }
+
+    return JSON.stringify({ status, body }, null, 2);
   }
 
   async function sha256Base64Url(value) {
