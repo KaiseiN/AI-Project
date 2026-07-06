@@ -29,7 +29,8 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
         return json_response(
             {
                 "status": "needs_input",
-                "message": build_clarification_message(exc.missing_fields, exc.partial_payload),
+                "message": exc.clarification_message
+                or build_clarification_message(exc.missing_fields, exc.partial_payload),
                 "missingFields": exc.missing_fields,
                 "partialPayload": exc.partial_payload,
             },

@@ -10,10 +10,16 @@ from shared.models import PimActivationRequest
 
 
 class IntentClarificationRequired(ValueError):
-    def __init__(self, missing_fields: list[str], partial_payload: dict) -> None:
+    def __init__(
+        self,
+        missing_fields: list[str],
+        partial_payload: dict,
+        message: str | None = None,
+    ) -> None:
         self.missing_fields = missing_fields
         self.partial_payload = partial_payload
-        super().__init__(f"Missing required information: {', '.join(missing_fields)}")
+        self.clarification_message = message
+        super().__init__(message or f"Missing required information: {', '.join(missing_fields)}")
 
 
 async def extract_pim_intent(message: str) -> PimActivationRequest:
@@ -130,11 +136,14 @@ def extract_pim_intent_with_foundry_sdk(message: str) -> PimActivationRequest:
 
 
 def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:
-    missing_fields = missing_required_intent_fields(intent_payload)
-    if missing_fields:
+    missing_fields = intent_payload.get("missingFields") or missing_required_intent_fields(
+        intent_payload
+    )
+    if intent_payload.get("status") == "needs_input" or missing_fields:
         raise IntentClarificationRequired(
             missing_fields,
-            partial_intent_payload(intent_payload),
+            intent_payload.get("partialPayload") or partial_intent_payload(intent_payload),
+            intent_payload.get("message"),
         )
 
     try:
@@ -175,13 +184,12 @@ def partial_intent_payload(intent_payload: dict) -> dict:
 
 def foundry_agent_input(message: str) -> str:
     return (
-        "Extract Microsoft Entra PIM activation intent from the user's request.\n"
-        "Return only valid JSON with no markdown and no explanation.\n"
-        "Required JSON properties: roleName, durationHours, ticketNumber, justification.\n"
-        f"Supported roles: {', '.join(settings.allowed_role_names())}.\n"
-        f"durationHours must be 1 to {settings.max_pim_duration_hours}.\n"
-        "ticketNumber must start with Ticket.\n"
-        "If justification is missing, use ticketNumber.\n"
+        "Follow your configured PIM activation intent-extraction instructions.\n"
+        "Return only valid JSON with no markdown.\n"
+        "If all required fields are present, return roleName, durationHours, "
+        "ticketNumber, and justification.\n"
+        "If required fields are missing, return status='needs_input', message, "
+        "missingFields, and partialPayload.\n"
         "Do not activate PIM.\n\n"
         f"User request: {message}"
     )
