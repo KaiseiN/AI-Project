@@ -172,9 +172,12 @@
       body: JSON.stringify({ message })
     });
 
-    const responseBody = await response.json();
+    const responseBody = await parseResponseBody(response);
     if (!response.ok) {
-      throw new Error(responseBody.details || responseBody.error || "Intent extraction failed.");
+      throw new Error(
+        formatErrorValue(responseBody.details || responseBody.error || responseBody) ||
+          "Intent extraction failed."
+      );
     }
 
     return responseBody;
@@ -254,6 +257,36 @@
     }
 
     return error.message;
+  }
+
+  async function parseResponseBody(response) {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return response.json();
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return "";
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
+  function formatErrorValue(value) {
+    if (!value) {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    return JSON.stringify(value, null, 2);
   }
 
   function renderConfirmation() {
