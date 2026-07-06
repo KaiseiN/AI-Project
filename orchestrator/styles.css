@@ -12,8 +12,8 @@ body {
 .site-header {
   display: flex;
   align-items: center;
-  min-height: 74px;
-  padding: 0 32px;
+  min-height: 72px;
+  padding: 0 24px;
   border-bottom: 1px solid #e5e7eb;
   background: #ffffff;
 }
@@ -26,7 +26,7 @@ body {
 
 .site-logo {
   display: block;
-  width: min(150px, 42vw);
+  width: min(156px, 52vw);
   height: auto;
 }
 
@@ -139,12 +139,12 @@ pre {
 
 @media (max-width: 760px) {
   .site-header {
-    min-height: 62px;
-    padding: 0 16px;
+    min-height: 60px;
+    padding: 0 14px;
   }
 
   .site-logo {
-    width: min(128px, 56vw);
+    width: min(132px, 64vw);
   }
 
   .shell {
