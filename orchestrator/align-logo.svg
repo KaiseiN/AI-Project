@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 299 75" role="img" aria-labelledby="title">
+  <title id="title">Align</title>
+  <g fill="#005da8">
+    <path d="M0 44c0-13 10-20 29-20h18v-2c0-8-5-12-16-12-9 0-17 2-25 7V5c8-4 18-5 29-5 20 0 31 8 31 25v48H49l-1-8c-5 6-13 10-24 10C9 75 0 63 0 44Zm47-9H32c-9 0-14 3-14 9 0 7 5 11 14 11 8 0 13-3 15-8V35Z"/>
+    <path d="M82 2h18v71H82V2Z"/>
+    <path d="M118 2h18v13h-18V2Zm0 22h18v49h-18V24Z"/>
+    <path d="M151 48c0-16 10-26 25-26 10 0 17 4 21 10l2-8h16v49h-18V47c0-7-5-12-13-12s-14 5-14 13v25h-19V48Z"/>
+  </g>
+  <g fill="none" stroke="#005da8" stroke-linejoin="round" stroke-width="4">
+    <path d="M229 14 259 4l33 10-31 12-32-12Z"/>
+    <path d="M229 30 259 20l33 10-31 12-32-12Z"/>
+    <path d="M229 46 259 36l33 10-31 12-32-12Z"/>
+    <path d="M229 14v16"/>
+    <path d="M292 14v16"/>
+    <path d="M229 30v16"/>
+    <path d="M292 30v16"/>
+    <path d="M229 46v16"/>
+    <path d="M292 46v16"/>
+    <path d="M229 62 261 73l31-11"/>
+  </g>
+</svg>

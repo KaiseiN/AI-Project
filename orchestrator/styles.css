@@ -31,6 +31,17 @@ body {
   margin-bottom: 20px;
 }
 
+.brand {
+  min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: min(180px, 42vw);
+  height: auto;
+  margin-bottom: 14px;
+}
+
 h1,
 h2,
 p {
@@ -129,5 +140,10 @@ pre {
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .brand-logo {
+    width: min(150px, 60vw);
+    margin-bottom: 12px;
   }
 }
