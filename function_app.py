@@ -8,11 +8,45 @@ from pydantic import ValidationError
 from shared.auth import acquire_graph_token_on_behalf_of, get_bearer_token
 from shared.config import settings
 from shared.graph import activate_pim_role, get_current_user
-from shared.models import PimActivationRequest
+from shared.intent import extract_pim_intent
+from shared.models import IntentExtractionRequest, PimActivationRequest
 from shared.responses import json_response
 from shared.tickets import validate_ticket
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+
+@app.route(route="intent/extract", methods=["POST"])
+async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
+    bearer_token = get_bearer_token(req)
+    if not bearer_token:
+        return json_response({"error": "Missing bearer token"}, 401)
+
+    try:
+        intent_request = IntentExtractionRequest.model_validate(req.get_json())
+        activation = await extract_pim_intent(intent_request.message)
+    except (ValueError, ValidationError) as exc:
+        return json_response({"error": "Intent extraction failed", "details": str(exc)}, 400)
+    except httpx.HTTPStatusError as exc:
+        logging.warning("Foundry intent extraction failed: %s", exc.response.text)
+        return func.HttpResponse(
+            exc.response.text,
+            status_code=exc.response.status_code,
+            mimetype="application/json",
+        )
+    except Exception as exc:
+        logging.exception("Intent extraction failed")
+        return json_response({"error": "Intent extraction failed", "details": str(exc)}, 500)
+
+    return json_response(
+        {
+            "roleName": activation.role_name,
+            "durationHours": activation.duration_hours,
+            "ticketNumber": activation.ticket_number,
+            "justification": activation.justification,
+        },
+        200,
+    )
 
 
 @app.route(route="pim/activate", methods=["POST"])

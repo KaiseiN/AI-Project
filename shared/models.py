@@ -21,3 +21,7 @@ class PimActivationRequest(BaseModel):
 class TicketValidationResult(BaseModel):
     is_valid: bool
     reason: str | None = None
+
+
+class IntentExtractionRequest(BaseModel):
+    message: str = Field(min_length=1)

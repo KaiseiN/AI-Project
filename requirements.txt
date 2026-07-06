@@ -1,4 +1,5 @@
 azure-functions
+azure-identity
 httpx
 msal
 pydantic

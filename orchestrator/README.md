@@ -74,4 +74,21 @@ Expected payload:
 
 ## Foundry Integration Point
 
-For production, replace `extractIntentLocally` in `app.js` with a call to your Foundry agent/orchestrator endpoint. Keep the final Function call in this app or a trusted backend so it uses the current signed-in user's token.
+The browser calls `/api/intent/extract` before activating PIM. The backend can run in either local deterministic mode or Foundry mode.
+
+For Foundry mode, add these settings to the deployed Azure Function App:
+
+```text
+FOUNDRY_INTENT_MODE=foundry
+FOUNDRY_RESPONSES_ENDPOINT=https://knakano-test.services.ai.azure.com/api/projects/knakano-test/agents/PIM-Activation/endpoint/protocols/openai/responses
+FOUNDRY_MANAGED_IDENTITY_CLIENT_ID=f8a3b6a3-42dc-4740-a7d9-b8f7fa1af3eb
+FOUNDRY_TOKEN_SCOPE=https://ai.azure.com/.default
+```
+
+Also attach that user-assigned managed identity to the Azure Function App and grant it access to the Azure AI Foundry project. If Foundry returns 401 for the token audience, change `FOUNDRY_TOKEN_SCOPE` to:
+
+```text
+https://cognitiveservices.azure.com/.default
+```
+
+Leave `FOUNDRY_INTENT_MODE=local` or unset for deterministic extraction.

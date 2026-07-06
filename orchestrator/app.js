@@ -157,37 +157,34 @@
     return tokenRecord.accessToken;
   }
 
-  function extractIntentLocally(message) {
-    const roleName = config.supportedRoles.find((role) =>
-      message.toLowerCase().includes(role.toLowerCase())
-    );
-
-    const durationMatch = message.match(/(\d+)\s*(?:hour|hours|hr|hrs)\b/i);
-    const ticketMatch = message.match(/\bTicket[\w-]+\b/i);
-
-    const missing = [];
-    if (!roleName) missing.push("roleName");
-    if (!durationMatch) missing.push("durationHours");
-    if (!ticketMatch) missing.push("ticketNumber");
-
-    if (missing.length > 0) {
-      throw new Error(`Missing required information: ${missing.join(", ")}`);
+  async function extractIntentWithBackend(message) {
+    const accessToken = getValidAccessToken();
+    if (!accessToken) {
+      throw new Error("Please sign in again.");
     }
 
-    const durationHours = Number.parseInt(durationMatch[1], 10);
-    const ticketNumber = ticketMatch[0];
+    const response = await fetch(config.intentUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message })
+    });
 
-    return {
-      roleName,
-      durationHours,
-      ticketNumber,
-      justification: ticketNumber
-    };
+    const responseBody = await response.json();
+    if (!response.ok) {
+      throw new Error(responseBody.details || responseBody.error || "Intent extraction failed.");
+    }
+
+    return responseBody;
   }
 
-  function extractIntent() {
+  async function extractIntent() {
     try {
-      currentPayload = extractIntentLocally(elements.promptInput.value);
+      elements.extractButton.disabled = true;
+      elements.resultOutput.textContent = "Extracting intent...";
+      currentPayload = await extractIntentWithBackend(elements.promptInput.value);
       elements.payloadOutput.textContent = JSON.stringify(currentPayload, null, 2);
       elements.resultOutput.textContent = "Review the activation details, then activate PIM.";
     } catch (error) {
@@ -202,7 +199,7 @@
 
   async function activatePim() {
     if (!currentPayload) {
-      extractIntent();
+      await extractIntent();
     }
 
     if (!currentPayload) {
@@ -316,7 +313,9 @@
 
   elements.signInButton.addEventListener("click", signIn);
   elements.signOutButton.addEventListener("click", signOut);
-  elements.extractButton.addEventListener("click", extractIntent);
+  elements.extractButton.addEventListener("click", () => {
+    extractIntent();
+  });
   elements.activateButton.addEventListener("click", activatePim);
 
   initialize();
