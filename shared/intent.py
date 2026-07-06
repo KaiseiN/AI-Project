@@ -130,6 +130,13 @@ def extract_pim_intent_with_foundry_sdk(message: str) -> PimActivationRequest:
 
 
 def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:
+    missing_fields = missing_required_intent_fields(intent_payload)
+    if missing_fields:
+        raise IntentClarificationRequired(
+            missing_fields,
+            partial_intent_payload(intent_payload),
+        )
+
     try:
         return PimActivationRequest.model_validate(intent_payload)
     except ValidationError as exc:
@@ -142,6 +149,28 @@ def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:
             raise IntentClarificationRequired(missing_fields, intent_payload) from exc
 
         raise
+
+
+def missing_required_intent_fields(intent_payload: dict) -> list[str]:
+    missing_fields = []
+    for field_name in ("roleName", "durationHours", "ticketNumber"):
+        value = intent_payload.get(field_name)
+        if value is None:
+            missing_fields.append(field_name)
+        elif isinstance(value, str) and not value.strip():
+            missing_fields.append(field_name)
+
+    return missing_fields
+
+
+def partial_intent_payload(intent_payload: dict) -> dict:
+    return {
+        field_name: value
+        for field_name, value in intent_payload.items()
+        if field_name in {"roleName", "durationHours", "ticketNumber", "justification"}
+        and value is not None
+        and not (isinstance(value, str) and not value.strip())
+    }
 
 
 def foundry_agent_input(message: str) -> str:
