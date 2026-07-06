@@ -1,10 +1,19 @@
-import re
+import asyncio
 import json
+import re
 
 import httpx
+from pydantic import ValidationError
 
 from shared.config import settings
 from shared.models import PimActivationRequest
+
+
+class IntentClarificationRequired(ValueError):
+    def __init__(self, missing_fields: list[str], partial_payload: dict) -> None:
+        self.missing_fields = missing_fields
+        self.partial_payload = partial_payload
+        super().__init__(f"Missing required information: {', '.join(missing_fields)}")
 
 
 async def extract_pim_intent(message: str) -> PimActivationRequest:
@@ -26,16 +35,26 @@ def extract_pim_intent_locally(message: str) -> PimActivationRequest:
     duration_match = re.search(r"(\d+)\s*(?:hour|hours|hr|hrs)\b", message, re.IGNORECASE)
     ticket_match = re.search(r"\bTicket[\w-]+\b", message, re.IGNORECASE)
 
+    partial_payload = {}
     missing = []
-    if not role_name:
+    if role_name:
+        partial_payload["roleName"] = role_name
+    else:
         missing.append("roleName")
-    if not duration_match:
+
+    if duration_match:
+        partial_payload["durationHours"] = int(duration_match.group(1))
+    else:
         missing.append("durationHours")
-    if not ticket_match:
+
+    if ticket_match:
+        partial_payload["ticketNumber"] = ticket_match.group(0)
+        partial_payload["justification"] = ticket_match.group(0)
+    else:
         missing.append("ticketNumber")
 
     if missing:
-        raise ValueError(f"Missing required information: {', '.join(missing)}")
+        raise IntentClarificationRequired(missing, partial_payload)
 
     ticket_number = ticket_match.group(0)
     return PimActivationRequest.model_validate(
@@ -49,57 +68,18 @@ def extract_pim_intent_locally(message: str) -> PimActivationRequest:
 
 
 async def extract_pim_intent_with_foundry(message: str) -> PimActivationRequest:
+    if settings.foundry_project_endpoint:
+        return await asyncio.to_thread(extract_pim_intent_with_foundry_sdk, message)
+
     if not settings.foundry_responses_endpoint:
-        raise RuntimeError("Missing required setting: FOUNDRY_RESPONSES_ENDPOINT")
+        raise RuntimeError(
+            "Missing required setting: FOUNDRY_PROJECT_ENDPOINT or FOUNDRY_RESPONSES_ENDPOINT"
+        )
 
     access_token = get_foundry_access_token()
     payload = {
-        "input": [
-            {
-                "role": "system",
-                "content": (
-                    "Extract Microsoft Entra PIM activation intent. Return only JSON with "
-                    "roleName, durationHours, ticketNumber, and justification. Supported roles: "
-                    f"{', '.join(settings.allowed_role_names())}. durationHours must be 1 to "
-                    f"{settings.max_pim_duration_hours}. ticketNumber must start with Ticket. "
-                    "If justification is missing, use ticketNumber. Do not activate PIM."
-                ),
-            },
-            {
-                "role": "user",
-                "content": message,
-            },
-        ],
-        "text": {
-            "format": {
-                "type": "json_schema",
-                "name": "pim_activation_intent",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["roleName", "durationHours", "ticketNumber", "justification"],
-                    "properties": {
-                        "roleName": {
-                            "type": "string",
-                            "enum": settings.allowed_role_names(),
-                        },
-                        "durationHours": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": settings.max_pim_duration_hours,
-                        },
-                        "ticketNumber": {
-                            "type": "string",
-                            "pattern": "^Ticket",
-                        },
-                        "justification": {
-                            "type": "string",
-                        },
-                    },
-                },
-            }
-        },
+        "input": foundry_input(message),
+        "text": foundry_text_format(),
     }
 
     async with httpx.AsyncClient(timeout=60) as client:
@@ -114,7 +94,120 @@ async def extract_pim_intent_with_foundry(message: str) -> PimActivationRequest:
 
     response.raise_for_status()
     intent_payload = extract_json_from_foundry_response(response.json())
-    return PimActivationRequest.model_validate(intent_payload)
+    return validate_intent_payload(intent_payload)
+
+
+def extract_pim_intent_with_foundry_sdk(message: str) -> PimActivationRequest:
+    from azure.ai.projects import AIProjectClient
+
+    credential = get_foundry_credential()
+
+    with (
+        credential,
+        AIProjectClient(
+            endpoint=settings.foundry_project_endpoint,
+            credential=credential,
+            allow_preview=True,
+        ) as project_client,
+    ):
+        if not settings.foundry_agent_version:
+            raise RuntimeError("Missing required setting: FOUNDRY_AGENT_VERSION")
+
+        openai_client = project_client.get_openai_client()
+        response = openai_client.responses.create(
+            input=[{"role": "user", "content": foundry_agent_input(message)}],
+            extra_body={
+                "agent_reference": {
+                    "name": settings.foundry_agent_name,
+                    "version": settings.foundry_agent_version,
+                    "type": "agent_reference",
+                }
+            },
+        )
+
+    intent_payload = extract_json_from_foundry_response(response.model_dump())
+    return validate_intent_payload(intent_payload)
+
+
+def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:
+    try:
+        return PimActivationRequest.model_validate(intent_payload)
+    except ValidationError as exc:
+        missing_fields = [
+            ".".join(str(part) for part in error["loc"])
+            for error in exc.errors()
+            if error["type"] == "missing"
+        ]
+        if missing_fields:
+            raise IntentClarificationRequired(missing_fields, intent_payload) from exc
+
+        raise
+
+
+def foundry_agent_input(message: str) -> str:
+    return (
+        "Extract Microsoft Entra PIM activation intent from the user's request.\n"
+        "Return only valid JSON with no markdown and no explanation.\n"
+        "Required JSON properties: roleName, durationHours, ticketNumber, justification.\n"
+        f"Supported roles: {', '.join(settings.allowed_role_names())}.\n"
+        f"durationHours must be 1 to {settings.max_pim_duration_hours}.\n"
+        "ticketNumber must start with Ticket.\n"
+        "If justification is missing, use ticketNumber.\n"
+        "Do not activate PIM.\n\n"
+        f"User request: {message}"
+    )
+
+
+def foundry_input(message: str) -> list[dict]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "Extract Microsoft Entra PIM activation intent. Return only JSON with "
+                "roleName, durationHours, ticketNumber, and justification. Supported roles: "
+                f"{', '.join(settings.allowed_role_names())}. durationHours must be 1 to "
+                f"{settings.max_pim_duration_hours}. ticketNumber must start with Ticket. "
+                "If justification is missing, use ticketNumber. Do not activate PIM."
+            ),
+        },
+        {
+            "role": "user",
+            "content": message,
+        },
+    ]
+
+
+def foundry_text_format() -> dict:
+    return {
+        "format": {
+            "type": "json_schema",
+            "name": "pim_activation_intent",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["roleName", "durationHours", "ticketNumber", "justification"],
+                "properties": {
+                    "roleName": {
+                        "type": "string",
+                        "enum": settings.allowed_role_names(),
+                    },
+                    "durationHours": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": settings.max_pim_duration_hours,
+                    },
+                    "ticketNumber": {
+                        "type": "string",
+                        "pattern": "^Ticket",
+                    },
+                    "justification": {
+                        "type": "string",
+                    },
+                },
+            },
+        }
+    }
 
 
 def foundry_responses_url() -> httpx.URL:
@@ -126,28 +219,65 @@ def foundry_responses_url() -> httpx.URL:
     return url.copy_add_param("api-version", settings.foundry_api_version)
 
 
-def get_foundry_access_token() -> str:
+def get_foundry_credential():
     from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 
     if settings.foundry_managed_identity_client_id:
-        credential = ManagedIdentityCredential(
+        return ManagedIdentityCredential(
             client_id=settings.foundry_managed_identity_client_id
         )
-    else:
-        credential = DefaultAzureCredential()
 
+    return DefaultAzureCredential()
+
+
+def get_foundry_access_token() -> str:
+    credential = get_foundry_credential()
     return credential.get_token(settings.foundry_token_scope).token
 
 
 def extract_json_from_foundry_response(response_body: dict) -> dict:
     if response_body.get("output_text"):
-        return json.loads(response_body["output_text"])
+        return parse_json_object(response_body["output_text"])
 
     for output_item in response_body.get("output", []):
-        for content_item in output_item.get("content", []):
-            if content_item.get("type") in {"output_text", "text"}:
-                text = content_item.get("text")
+        if output_item.get("type") == "message":
+            for content_item in output_item.get("content", []):
+                text = extract_text_from_content_item(content_item)
                 if text:
-                    return json.loads(text)
+                    return parse_json_object(text)
 
-    raise RuntimeError("Foundry response did not contain JSON output.")
+        for content_item in output_item.get("content", []):
+            text = extract_text_from_content_item(content_item)
+            if text:
+                return parse_json_object(text)
+
+    preview = json.dumps(response_body)[:1000]
+    raise RuntimeError(f"Foundry response did not contain JSON output. Preview: {preview}")
+
+
+def extract_text_from_content_item(content_item: dict) -> str | None:
+    if content_item.get("type") in {"output_text", "text"}:
+        text = content_item.get("text")
+        if isinstance(text, str):
+            return text
+
+    text = content_item.get("text")
+    if isinstance(text, str):
+        return text
+
+    if isinstance(text, dict) and isinstance(text.get("value"), str):
+        return text["value"]
+
+    return None
+
+
+def parse_json_object(text: str) -> dict:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise
+
+        return json.loads(text[start : end + 1])

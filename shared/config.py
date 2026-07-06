@@ -8,6 +8,10 @@ class Settings:
     ticket_system_name: str
     max_pim_duration_hours: int
     foundry_intent_mode: str
+    foundry_project_endpoint: str | None
+    foundry_agent_name: str
+    foundry_agent_version: str | None
+    foundry_agent_isolation_key: str
     foundry_responses_endpoint: str | None
     foundry_managed_identity_client_id: str | None
     foundry_token_scope: str
@@ -20,6 +24,12 @@ class Settings:
         self.ticket_system_name = os.getenv("TICKET_SYSTEM_NAME", "ServiceNow")
         self.max_pim_duration_hours = int(os.getenv("MAX_PIM_DURATION_HOURS", "4"))
         self.foundry_intent_mode = os.getenv("FOUNDRY_INTENT_MODE", "local").lower()
+        self.foundry_project_endpoint = os.getenv("FOUNDRY_PROJECT_ENDPOINT")
+        self.foundry_agent_name = os.getenv("FOUNDRY_AGENT_NAME", "PIM-Activation")
+        self.foundry_agent_version = os.getenv("FOUNDRY_AGENT_VERSION")
+        self.foundry_agent_isolation_key = os.getenv(
+            "FOUNDRY_AGENT_ISOLATION_KEY", "pim-intent-extraction"
+        )
         self.foundry_responses_endpoint = os.getenv("FOUNDRY_RESPONSES_ENDPOINT")
         self.foundry_managed_identity_client_id = os.getenv("FOUNDRY_MANAGED_IDENTITY_CLIENT_ID")
         self.foundry_token_scope = os.getenv("FOUNDRY_TOKEN_SCOPE", "https://ai.azure.com/.default")

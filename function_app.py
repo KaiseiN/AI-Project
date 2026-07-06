@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from shared.auth import acquire_graph_token_on_behalf_of, get_bearer_token
 from shared.config import settings
 from shared.graph import activate_pim_role, get_current_user
-from shared.intent import extract_pim_intent
+from shared.intent import IntentClarificationRequired, extract_pim_intent
 from shared.models import IntentExtractionRequest, PimActivationRequest
 from shared.responses import json_response
 from shared.tickets import validate_ticket
@@ -25,6 +25,16 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
     try:
         intent_request = IntentExtractionRequest.model_validate(req.get_json())
         activation = await extract_pim_intent(intent_request.message)
+    except IntentClarificationRequired as exc:
+        return json_response(
+            {
+                "status": "needs_input",
+                "message": build_clarification_message(exc.missing_fields, exc.partial_payload),
+                "missingFields": exc.missing_fields,
+                "partialPayload": exc.partial_payload,
+            },
+            200,
+        )
     except (ValueError, ValidationError) as exc:
         return json_response({"error": "Intent extraction failed", "details": str(exc)}, 400)
     except httpx.HTTPStatusError as exc:
@@ -47,6 +57,40 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
         },
         200,
     )
+
+
+def build_clarification_message(missing_fields: list[str], partial_payload: dict) -> str:
+    lines = []
+    if len(missing_fields) == 1:
+        lines.append(f"Missing required field: {missing_fields[0]}.")
+    else:
+        lines.append(f"Missing required fields: {', '.join(missing_fields)}.")
+
+    lines.extend(["", "Please reply with:"])
+
+    if "ticketNumber" in missing_fields:
+        lines.append("")
+        lines.append('ticketNumber (must start with "Ticket", e.g., Ticket12345)')
+        lines.append("optional justification (if omitted, I'll use the ticket number)")
+
+    if "roleName" in missing_fields:
+        lines.append("")
+        lines.append(f"roleName ({', '.join(settings.allowed_role_names())})")
+
+    if "durationHours" in missing_fields:
+        lines.append("")
+        lines.append(f"durationHours (1-{settings.max_pim_duration_hours})")
+
+    if partial_payload:
+        lines.extend(
+            [
+                "",
+                "Current request details:",
+                json.dumps(partial_payload, indent=2),
+            ]
+        )
+
+    return "\n".join(lines)
 
 
 @app.route(route="pim/activate", methods=["POST"])

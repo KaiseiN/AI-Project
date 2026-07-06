@@ -187,7 +187,15 @@
     try {
       elements.extractButton.disabled = true;
       elements.resultOutput.textContent = "Extracting intent...";
-      currentPayload = await extractIntentWithBackend(elements.promptInput.value);
+      const intentResult = await extractIntentWithBackend(elements.promptInput.value);
+      if (intentResult.status === "needs_input") {
+        currentPayload = null;
+        elements.payloadOutput.textContent = JSON.stringify(intentResult.partialPayload || {}, null, 2);
+        elements.resultOutput.textContent = intentResult.message;
+        return;
+      }
+
+      currentPayload = intentResult;
       elements.payloadOutput.textContent = JSON.stringify(currentPayload, null, 2);
       elements.resultOutput.textContent = "Review the activation details, then activate PIM.";
     } catch (error) {
