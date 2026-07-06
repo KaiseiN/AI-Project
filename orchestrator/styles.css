@@ -9,31 +9,10 @@ body {
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
-.site-header {
-  display: flex;
-  align-items: center;
-  min-height: 58px;
-  padding: 0 18px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
-}
-
-.site-brand {
-  display: inline-flex;
-  align-items: center;
-  line-height: 0;
-}
-
-.site-logo {
-  display: block;
-  width: min(118px, 44vw);
-  height: auto;
-}
-
 .shell {
   max-width: 1040px;
   margin: 0 auto;
-  padding: 24px 32px 32px;
+  padding: 32px;
 }
 
 .toolbar,
@@ -138,15 +117,6 @@ pre {
 }
 
 @media (max-width: 760px) {
-  .site-header {
-    min-height: 54px;
-    padding: 0 14px;
-  }
-
-  .site-logo {
-    width: min(108px, 58vw);
-  }
-
   .shell {
     padding: 16px;
   }
