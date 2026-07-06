@@ -11,6 +11,7 @@ class Settings:
     foundry_responses_endpoint: str | None
     foundry_managed_identity_client_id: str | None
     foundry_token_scope: str
+    foundry_api_version: str
 
     def __init__(self) -> None:
         self.azure_tenant_id = self._required("AZURE_TENANT_ID")
@@ -22,6 +23,7 @@ class Settings:
         self.foundry_responses_endpoint = os.getenv("FOUNDRY_RESPONSES_ENDPOINT")
         self.foundry_managed_identity_client_id = os.getenv("FOUNDRY_MANAGED_IDENTITY_CLIENT_ID")
         self.foundry_token_scope = os.getenv("FOUNDRY_TOKEN_SCOPE", "https://ai.azure.com/.default")
+        self.foundry_api_version = os.getenv("FOUNDRY_API_VERSION", "2025-05-01-preview")
 
         self._role_map = {
             "AI Reader": "1fe13547-53f6-408d-ac04-7f8eed167b38",

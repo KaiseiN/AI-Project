@@ -104,7 +104,7 @@ async def extract_pim_intent_with_foundry(message: str) -> PimActivationRequest:
 
     async with httpx.AsyncClient(timeout=60) as client:
         response = await client.post(
-            settings.foundry_responses_endpoint,
+            foundry_responses_url(),
             headers={
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
@@ -115,6 +115,15 @@ async def extract_pim_intent_with_foundry(message: str) -> PimActivationRequest:
     response.raise_for_status()
     intent_payload = extract_json_from_foundry_response(response.json())
     return PimActivationRequest.model_validate(intent_payload)
+
+
+def foundry_responses_url() -> httpx.URL:
+    url = httpx.URL(settings.foundry_responses_endpoint)
+    query_params = dict(url.params.multi_items())
+    if "api-version" in query_params:
+        return url
+
+    return url.copy_add_param("api-version", settings.foundry_api_version)
 
 
 def get_foundry_access_token() -> str:

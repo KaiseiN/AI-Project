@@ -81,8 +81,9 @@ For Foundry mode, add these settings to the deployed Azure Function App:
 ```text
 FOUNDRY_INTENT_MODE=foundry
 FOUNDRY_RESPONSES_ENDPOINT=https://knakano-test.services.ai.azure.com/api/projects/knakano-test/agents/PIM-Activation/endpoint/protocols/openai/responses
-FOUNDRY_MANAGED_IDENTITY_CLIENT_ID=f8a3b6a3-42dc-4740-a7d9-b8f7fa1af3eb
+FOUNDRY_MANAGED_IDENTITY_CLIENT_ID=c8931a20-cb95-4721-9fa1-16a3e555f952
 FOUNDRY_TOKEN_SCOPE=https://ai.azure.com/.default
+FOUNDRY_API_VERSION=2025-05-01-preview
 ```
 
 Also attach that user-assigned managed identity to the Azure Function App and grant it access to the Azure AI Foundry project. If Foundry returns 401 for the token audience, change `FOUNDRY_TOKEN_SCOPE` to:
