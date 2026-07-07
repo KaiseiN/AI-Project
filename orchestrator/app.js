@@ -315,6 +315,10 @@
       return `${currentPayload.roleName} is already active.`;
     }
 
+    if (body && body.message) {
+      return body.message;
+    }
+
     if (status === 201 && body && body.status === "Provisioned") {
       return [
         `${currentPayload.roleName} is active for ${currentPayload.durationHours} ` +

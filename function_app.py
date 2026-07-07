@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from shared.auth import acquire_graph_token_on_behalf_of, get_bearer_token
 from shared.config import settings
-from shared.graph import activate_pim_role, get_current_user
+from shared.graph import activate_pim_role, get_current_user, get_current_user_eligibilities
 from shared.intent import IntentClarificationRequired, extract_pim_intent
 from shared.models import IntentExtractionRequest, PimActivationRequest
 from shared.responses import json_response
@@ -129,6 +129,10 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
         graph_token = acquire_graph_token_on_behalf_of(bearer_token)
         user = await get_current_user(graph_token)
         principal_id = user["id"]
+        eligibilities = await get_current_user_eligibilities(graph_token)
+        if not is_user_eligible_for_role(eligibilities, role_definition_id):
+            return json_response({"message": "Not eligible for role."}, 403)
+
         result = await activate_pim_role(
             graph_token=graph_token,
             principal_id=principal_id,
@@ -138,6 +142,8 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
     except httpx.HTTPStatusError as exc:
         if is_already_active_graph_error(exc.response):
             return json_response({"message": "pim is already activated"}, 200)
+        if is_not_eligible_graph_error(exc.response):
+            return json_response({"message": "Not eligible for role."}, 403)
 
         logging.warning("Graph request failed: %s", exc.response.text)
         return func.HttpResponse(
@@ -183,3 +189,29 @@ def is_already_active_graph_error(response: httpx.Response) -> bool:
     )
 
     return response.status_code in {400, 409} and already_signal and pim_signal
+
+
+def is_user_eligible_for_role(eligibilities: list[dict], role_definition_id: str) -> bool:
+    return any(
+        eligibility.get("roleDefinitionId") == role_definition_id
+        and str(eligibility.get("status", "")).lower() == "provisioned"
+        for eligibility in eligibilities
+    )
+
+
+def is_not_eligible_graph_error(response: httpx.Response) -> bool:
+    try:
+        graph_error = response.json().get("error", {})
+    except ValueError:
+        graph_error = {}
+
+    code = str(graph_error.get("code", "")).lower()
+    message = str(graph_error.get("message", "")).lower()
+    combined = f"{code} {message}"
+
+    return response.status_code in {400, 403, 404} and (
+        "roleassignmentdoesnotexist" in combined
+        or "role assignment does not exist" in combined
+        or "eligible" in combined
+        or "eligibility" in combined
+    )
