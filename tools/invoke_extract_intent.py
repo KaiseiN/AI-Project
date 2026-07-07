@@ -19,7 +19,7 @@ import function_app
 
 async def main() -> None:
     body = {
-        "message": "Activate my AI Reader role for 2 hours for Ticket12345."
+        "message": "Activate my AI Reader role for 2 hours for #12345."
     }
 
     req = func.HttpRequest(

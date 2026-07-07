@@ -65,8 +65,8 @@ async def main() -> None:
     body = {
         "roleName": "AI Reader",
         "durationHours": 2,
-        "ticketNumber": "Ticket12345",
-        "justification": "Ticket12345",
+        "ticketNumber": "#12345",
+        "justification": "#12345",
     }
 
     async with httpx.AsyncClient(timeout=60) as client:

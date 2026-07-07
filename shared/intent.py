@@ -39,7 +39,7 @@ def extract_pim_intent_locally(message: str) -> PimActivationRequest:
         None,
     )
     duration_match = re.search(r"(\d+)\s*(?:hour|hours|hr|hrs)\b", message, re.IGNORECASE)
-    ticket_match = re.search(r"\bTicket[\w-]+\b", message, re.IGNORECASE)
+    ticket_match = re.search(r"#[A-Za-z0-9][\w-]*", message)
 
     partial_payload = {}
     missing = []
@@ -203,7 +203,7 @@ def foundry_input(message: str) -> list[dict]:
                 "Extract Microsoft Entra PIM activation intent. Return only JSON with "
                 "roleName, durationHours, ticketNumber, and justification. Supported roles: "
                 f"{', '.join(settings.allowed_role_names())}. durationHours must be 1 to "
-                f"{settings.max_pim_duration_hours}. ticketNumber must start with Ticket. "
+                f'{settings.max_pim_duration_hours}. ticketNumber must start with "#". '
                 "If justification is missing, use ticketNumber. Do not activate PIM."
             ),
         },
@@ -236,7 +236,7 @@ def foundry_text_format() -> dict:
                     },
                     "ticketNumber": {
                         "type": "string",
-                        "pattern": "^Ticket",
+                        "pattern": "^#",
                     },
                     "justification": {
                         "type": "string",

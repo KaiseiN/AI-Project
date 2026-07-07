@@ -58,7 +58,7 @@ http://localhost:8000/orchestrator/
 ## Test Prompt
 
 ```text
-Activate my AI Reader role for 2 hours for Ticket12345.
+Activate my AI Reader role for 2 hours for #12345.
 ```
 
 Expected payload:
@@ -67,8 +67,8 @@ Expected payload:
 {
   "roleName": "AI Reader",
   "durationHours": 2,
-  "ticketNumber": "Ticket12345",
-  "justification": "Ticket12345"
+  "ticketNumber": "#12345",
+  "justification": "#12345"
 }
 ```
 

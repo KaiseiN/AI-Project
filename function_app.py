@@ -71,7 +71,7 @@ def build_clarification_message(missing_fields: list[str], partial_payload: dict
 
     if "ticketNumber" in missing_fields:
         lines.append("")
-        lines.append('ticketNumber (must start with "Ticket", e.g., Ticket12345)')
+        lines.append('ticketNumber (must start with "#", e.g., #12345)')
         lines.append("optional justification (if omitted, I'll use the ticket number)")
 
     if "roleName" in missing_fields:
@@ -141,7 +141,7 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
         )
     except httpx.HTTPStatusError as exc:
         if is_already_active_graph_error(exc.response):
-            return json_response({"message": "pim is already activated"}, 200)
+            return json_response({"message": "PIM is already activated."}, 200)
         if is_not_eligible_graph_error(exc.response):
             return json_response({"message": "Not eligible for role."}, 403)
 

@@ -311,7 +311,12 @@
   }
 
   function formatActivationResult(status, body) {
-    if (status === 200 && body && body.message === "pim is already activated") {
+    if (
+      status === 200 &&
+      body &&
+      body.message &&
+      body.message.toLowerCase() === "pim is already activated."
+    ) {
       return `${currentPayload.roleName} is already active.`;
     }
 
