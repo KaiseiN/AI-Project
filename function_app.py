@@ -29,8 +29,10 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
         return json_response(
             {
                 "status": "needs_input",
-                "message": exc.clarification_message
-                or build_clarification_message(exc.missing_fields, exc.partial_payload),
+                "message": normalize_clarification_message(
+                    exc.clarification_message
+                    or build_clarification_message(exc.missing_fields, exc.partial_payload)
+                ),
                 "missingFields": exc.missing_fields,
                 "partialPayload": exc.partial_payload,
             },
@@ -92,6 +94,22 @@ def build_clarification_message(missing_fields: list[str], partial_payload: dict
         )
 
     return "\n".join(lines)
+
+
+def normalize_clarification_message(message: str) -> str:
+    return (
+        message.replace(
+            "Missing or invalid ticketNumber. Provide a ticket number that starts with 'Ticket' "
+            "(e.g., 'Ticket12345' or 'Ticket-12345').",
+            'Missing or invalid ticketNumber. Provide a ticket number that starts with "#" '
+            "(e.g., #12345 or #12345-1).",
+        )
+        .replace("must start with “Ticket”", 'must start with "#"')
+        .replace("must start with \"Ticket\"", 'must start with "#"')
+        .replace("must start with 'Ticket'", 'must start with "#"')
+        .replace("Ticket12345", "#12345")
+        .replace("Ticket-12345", "#12345")
+    )
 
 
 @app.route(route="pim/activate", methods=["POST"])
