@@ -190,6 +190,8 @@ def foundry_agent_input(message: str) -> str:
         "ticketNumber, and justification.\n"
         "If required fields are missing, return status='needs_input', message, "
         "missingFields, and partialPayload.\n"
+        'ticketNumber must start with "#", for example "#12345".\n'
+        'If the user provides a ticket number without "#", ask them to provide it with "#".\n'
         "Do not activate PIM.\n\n"
         f"User request: {message}"
     )
