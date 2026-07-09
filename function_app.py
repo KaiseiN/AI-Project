@@ -10,14 +10,17 @@ from shared.config import settings
 from shared.graph import activate_pim_role, get_current_user, get_current_user_eligibilities
 from shared.intent import IntentClarificationRequired, extract_pim_intent
 from shared.models import IntentExtractionRequest, PimActivationRequest
-from shared.responses import json_response
+from shared.responses import cors_headers, cors_preflight_response, json_response
 from shared.tickets import validate_ticket
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
-@app.route(route="intent/extract", methods=["POST"])
+@app.route(route="intent/extract", methods=["POST", "OPTIONS"])
 async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return cors_preflight_response()
+
     bearer_token = get_bearer_token(req)
     if not bearer_token:
         return json_response({"error": "Missing bearer token"}, 401)
@@ -46,6 +49,7 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
             exc.response.text,
             status_code=exc.response.status_code,
             mimetype="application/json",
+            headers=cors_headers(),
         )
     except Exception as exc:
         logging.exception("Intent extraction failed")
@@ -116,8 +120,11 @@ def normalize_clarification_message(message: str) -> str:
     )
 
 
-@app.route(route="pim/activate", methods=["POST"])
+@app.route(route="pim/activate", methods=["POST", "OPTIONS"])
 async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return cors_preflight_response()
+
     try:
         activation = PimActivationRequest.model_validate(req.get_json())
     except (ValueError, ValidationError) as exc:
@@ -172,6 +179,7 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
             exc.response.text,
             status_code=exc.response.status_code,
             mimetype="application/json",
+            headers=cors_headers(),
         )
     except Exception as exc:
         logging.exception("PIM activation failed")
@@ -189,6 +197,7 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
         json.dumps(result),
         status_code=201,
         mimetype="application/json",
+        headers=cors_headers(),
     )
 
 
