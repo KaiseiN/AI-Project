@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 
 import httpx
@@ -24,7 +25,13 @@ class IntentClarificationRequired(ValueError):
 
 async def extract_pim_intent(message: str) -> PimActivationRequest:
     if settings.foundry_intent_mode == "foundry":
-        return await extract_pim_intent_with_foundry(message)
+        try:
+            return await extract_pim_intent_with_foundry(message)
+        except IntentClarificationRequired:
+            raise
+        except Exception:
+            logging.exception("Foundry intent extraction failed; falling back to local extraction")
+            return extract_pim_intent_locally(message)
 
     return extract_pim_intent_locally(message)
 
