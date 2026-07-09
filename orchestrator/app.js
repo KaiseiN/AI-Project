@@ -165,11 +165,8 @@
 
     const response = await fetch(config.intentUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ message })
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ accessToken, message })
     });
 
     const responseBody = await parseResponseBody(response);
@@ -230,11 +227,8 @@
     try {
       const response = await fetch(config.functionUrl, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(currentPayload)
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ accessToken, ...currentPayload })
       });
 
       const contentType = response.headers.get("content-type") || "";

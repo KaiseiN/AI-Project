@@ -16,17 +16,36 @@ from shared.tickets import validate_ticket
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
+def get_request_json(req: func.HttpRequest) -> dict:
+    try:
+        return req.get_json()
+    except ValueError:
+        body = req.get_body().decode("utf-8")
+        if not body:
+            raise
+        return json.loads(body)
+
+
+def get_request_token(req: func.HttpRequest, payload: dict) -> str | None:
+    return get_bearer_token(req) or payload.get("accessToken")
+
+
 @app.route(route="intent/extract", methods=["POST", "OPTIONS"])
 async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return cors_preflight_response()
 
-    bearer_token = get_bearer_token(req)
+    try:
+        request_payload = get_request_json(req)
+    except (ValueError, json.JSONDecodeError) as exc:
+        return json_response({"error": "Invalid request", "details": str(exc)}, 400)
+
+    bearer_token = get_request_token(req, request_payload)
     if not bearer_token:
         return json_response({"error": "Missing bearer token"}, 401)
 
     try:
-        intent_request = IntentExtractionRequest.model_validate(req.get_json())
+        intent_request = IntentExtractionRequest.model_validate(request_payload)
         activation = await extract_pim_intent(intent_request.message)
     except IntentClarificationRequired as exc:
         return json_response(
@@ -126,7 +145,8 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
         return cors_preflight_response()
 
     try:
-        activation = PimActivationRequest.model_validate(req.get_json())
+        request_payload = get_request_json(req)
+        activation = PimActivationRequest.model_validate(request_payload)
     except (ValueError, ValidationError) as exc:
         return json_response({"error": "Invalid request", "details": str(exc)}, 400)
 
@@ -143,7 +163,7 @@ async def activate_pim(req: func.HttpRequest) -> func.HttpResponse:
             400,
         )
 
-    bearer_token = get_bearer_token(req)
+    bearer_token = get_request_token(req, request_payload)
     if not bearer_token:
         return json_response({"error": "Missing bearer token"}, 401)
 
