@@ -30,6 +30,16 @@ async def extract_pim_intent(message: str) -> PimActivationRequest:
 
 
 def extract_pim_intent_locally(message: str) -> PimActivationRequest:
+    partial_payload = extract_local_intent_fields(message)
+    missing = missing_required_intent_fields(partial_payload)
+
+    if missing:
+        raise IntentClarificationRequired(missing, partial_payload)
+
+    return PimActivationRequest.model_validate(partial_payload)
+
+
+def extract_local_intent_fields(message: str) -> dict:
     role_name = next(
         (
             role
@@ -42,35 +52,17 @@ def extract_pim_intent_locally(message: str) -> PimActivationRequest:
     ticket_match = re.search(r"#[A-Za-z0-9][\w-]*", message)
 
     partial_payload = {}
-    missing = []
     if role_name:
         partial_payload["roleName"] = role_name
-    else:
-        missing.append("roleName")
 
     if duration_match:
         partial_payload["durationHours"] = int(duration_match.group(1))
-    else:
-        missing.append("durationHours")
 
     if ticket_match:
         partial_payload["ticketNumber"] = ticket_match.group(0)
         partial_payload["justification"] = ticket_match.group(0)
-    else:
-        missing.append("ticketNumber")
 
-    if missing:
-        raise IntentClarificationRequired(missing, partial_payload)
-
-    ticket_number = ticket_match.group(0)
-    return PimActivationRequest.model_validate(
-        {
-            "roleName": role_name,
-            "durationHours": int(duration_match.group(1)),
-            "ticketNumber": ticket_number,
-            "justification": ticket_number,
-        }
-    )
+    return partial_payload
 
 
 async def extract_pim_intent_with_foundry(message: str) -> PimActivationRequest:
@@ -99,7 +91,10 @@ async def extract_pim_intent_with_foundry(message: str) -> PimActivationRequest:
         )
 
     response.raise_for_status()
-    intent_payload = extract_json_from_foundry_response(response.json())
+    intent_payload = merge_local_intent_fields(
+        extract_json_from_foundry_response(response.json()),
+        message,
+    )
     return validate_intent_payload(intent_payload)
 
 
@@ -131,8 +126,35 @@ def extract_pim_intent_with_foundry_sdk(message: str) -> PimActivationRequest:
             },
         )
 
-    intent_payload = extract_json_from_foundry_response(response.model_dump())
+    intent_payload = merge_local_intent_fields(
+        extract_json_from_foundry_response(response.model_dump()),
+        message,
+    )
     return validate_intent_payload(intent_payload)
+
+
+def merge_local_intent_fields(intent_payload: dict, message: str) -> dict:
+    local_payload = extract_local_intent_fields(message)
+    merged_payload = dict(intent_payload)
+
+    if isinstance(merged_payload.get("partialPayload"), dict):
+        merged_payload["partialPayload"] = {
+            **partial_intent_payload(merged_payload["partialPayload"]),
+            **local_payload,
+        }
+
+    for field_name, value in local_payload.items():
+        if not merged_payload.get(field_name) or field_name in {"ticketNumber", "justification"}:
+            merged_payload[field_name] = value
+
+    missing_fields = missing_required_intent_fields(merged_payload)
+    if not missing_fields and merged_payload.get("status") == "needs_input":
+        merged_payload.pop("status", None)
+        merged_payload.pop("message", None)
+        merged_payload.pop("missingFields", None)
+        merged_payload.pop("partialPayload", None)
+
+    return merged_payload
 
 
 def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:

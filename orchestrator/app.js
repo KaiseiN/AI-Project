@@ -201,7 +201,7 @@
     } catch (error) {
       currentPayload = null;
       elements.payloadOutput.textContent = "{}";
-      elements.resultOutput.textContent = error.message;
+      elements.resultOutput.textContent = buildFetchErrorMessage(error);
     }
 
     renderConfirmation();
