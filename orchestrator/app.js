@@ -171,10 +171,7 @@
 
     const responseBody = await parseResponseBody(response);
     if (!response.ok) {
-      throw new Error(
-        formatErrorValue(responseBody.details || responseBody.error || responseBody) ||
-          "Intent extraction failed."
-      );
+      throw new Error(formatHttpError("Intent extraction failed", response.status, responseBody));
     }
 
     return responseBody;
@@ -236,6 +233,15 @@
         ? await response.json()
         : await response.text();
 
+      if (!response.ok) {
+        elements.resultOutput.textContent = formatHttpError(
+          "PIM activation failed",
+          response.status,
+          responseBody
+        );
+        return;
+      }
+
       elements.resultOutput.textContent = formatActivationResult(response.status, responseBody);
     } catch (error) {
       elements.resultOutput.textContent = buildFetchErrorMessage(error);
@@ -289,6 +295,15 @@
     }
 
     return JSON.stringify(value, null, 2);
+  }
+
+  function formatHttpError(prefix, status, body) {
+    const value =
+      body && typeof body === "object"
+        ? body.message || body.details || body.error || body
+        : body;
+    const formattedValue = formatErrorValue(value);
+    return formattedValue ? `${prefix}. HTTP ${status}.\n\n${formattedValue}` : `${prefix}. HTTP ${status}.`;
   }
 
   function renderConfirmation() {

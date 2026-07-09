@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 
 import azure.functions as func
 import httpx
@@ -14,6 +15,7 @@ from shared.responses import cors_headers, cors_preflight_response, json_respons
 from shared.tickets import validate_ticket
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+STATIC_ROOT = Path(__file__).parent / "orchestrator"
 
 
 def get_request_json(req: func.HttpRequest) -> dict:
@@ -28,6 +30,51 @@ def get_request_json(req: func.HttpRequest) -> dict:
 
 def get_request_token(req: func.HttpRequest, payload: dict) -> str | None:
     return get_bearer_token(req) or payload.get("accessToken")
+
+
+@app.route(route="orchestrator/{filename}", methods=["GET"])
+async def orchestrator_static(req: func.HttpRequest) -> func.HttpResponse:
+    filename = req.route_params.get("filename") or "index.html"
+    if filename == "config.js":
+        return func.HttpResponse(
+            build_orchestrator_config(req),
+            status_code=200,
+            mimetype="application/javascript",
+        )
+
+    allowed_files = {
+        "index.html": "text/html",
+        "app.js": "application/javascript",
+        "styles.css": "text/css",
+    }
+    mimetype = allowed_files.get(filename)
+    if not mimetype:
+        return func.HttpResponse("Not found", status_code=404)
+
+    file_path = STATIC_ROOT / filename
+    if not file_path.exists():
+        return func.HttpResponse("Not found", status_code=404)
+
+    return func.HttpResponse(
+        file_path.read_text(encoding="utf-8"),
+        status_code=200,
+        mimetype=mimetype,
+    )
+
+
+def build_orchestrator_config(req: func.HttpRequest) -> str:
+    origin = f"{req.url.split('/api/orchestrator/', 1)[0]}"
+    redirect_uri = f"{origin}/api/orchestrator/index.html"
+    config = {
+        "tenantId": "a373f986-e6fe-48b3-8acd-d9cc4dbdb2e6",
+        "clientId": "2d927dbc-e54f-4e43-a1d9-ab9988006dc6",
+        "apiScope": "api://2450d4e7-7781-4a1f-885b-710a17d3d31b/pim.activate",
+        "intentUrl": f"{origin}/api/intent/extract",
+        "functionUrl": f"{origin}/api/pim/activate",
+        "redirectUri": redirect_uri,
+        "supportedRoles": ["AI Reader"],
+    }
+    return f"window.PIM_ORCHESTRATOR_CONFIG = {json.dumps(config, indent=2)};\n"
 
 
 @app.route(route="intent/extract", methods=["POST", "OPTIONS"])
