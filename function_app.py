@@ -143,7 +143,7 @@ def build_clarification_message(missing_fields: list[str], partial_payload: dict
 
     if "ticketNumber" in missing_fields:
         lines.append("")
-        lines.append('ticketNumber (must start with "#", e.g., #12345)')
+        lines.append('ticket number (must start with "#", e.g., #12345)')
         lines.append("optional justification (if omitted, I'll use the ticket number)")
 
     if "roleName" in missing_fields:
@@ -171,16 +171,25 @@ def normalize_clarification_message(message: str) -> str:
         message.replace(
             "Missing or invalid ticketNumber. Provide a ticket number that starts with 'Ticket' "
             "(e.g., 'Ticket12345' or 'Ticket-12345').",
-            'Missing or invalid ticketNumber. Provide a ticket number that starts with "#" '
+            'Missing or invalid ticket number. Provide a ticket number that starts with "#" '
             "(e.g., #12345 or #12345-1).",
         )
+        .replace("ticketNumber", "ticket number")
+        .replace("TicketNumber", "ticket number")
+        .replace("ticketnumber", "ticket number")
+        .replace("Ticket number", "ticket number")
         .replace("must start with “Ticket”", 'must start with "#"')
         .replace("must start with \"Ticket\"", 'must start with "#"')
         .replace("must start with 'Ticket'", 'must start with "#"')
+        .replace("starting with 'Ticket'", 'starting with "#"')
+        .replace("starting with \"Ticket\"", 'starting with "#"')
+        .replace("starting with Ticket", 'starting with "#"')
         .replace("starts with “Ticket”", 'starts with "#"')
         .replace("starts with \"Ticket\"", 'starts with "#"')
         .replace("starts with 'Ticket'", 'starts with "#"')
         .replace("starts with Ticket", 'starts with "#"')
+        .replace("with 'Ticket'", 'with "#"')
+        .replace("with \"Ticket\"", 'with "#"')
         .replace("Ticket12345", "#12345")
         .replace("Ticket-12345", "#12345")
     )
