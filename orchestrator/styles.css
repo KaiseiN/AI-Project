@@ -52,6 +52,12 @@ label {
   font-weight: 600;
 }
 
+.guidance {
+  margin-bottom: 10px;
+  color: #4f5661;
+  font-size: 14px;
+}
+
 textarea {
   width: 100%;
   min-height: 112px;
