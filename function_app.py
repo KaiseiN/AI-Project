@@ -169,10 +169,8 @@ def build_clarification_message(missing_fields: list[str], partial_payload: dict
 def normalize_clarification_message(message: str) -> str:
     return (
         message.replace(
-            "Missing or invalid ticketNumber. Provide a ticket number that starts with 'Ticket' "
-            "(e.g., 'Ticket12345' or 'Ticket-12345').",
-            'Missing or invalid ticket number. Provide a ticket number that starts with "#" '
-            "(e.g., #12345 or #12345-1).",
+            "Missing or invalid ticketNumber. Provide a ticket number that starts with '#' "
+            "(e.g., '#12345')."
         )
         .replace("ticketNumber", "ticket number")
         .replace("TicketNumber", "ticket number")
