@@ -43,7 +43,7 @@ def extract_pim_intent_locally(message: str) -> PimActivationRequest:
     if missing:
         raise IntentClarificationRequired(missing, partial_payload)
 
-    return PimActivationRequest.model_validate(partial_payload)
+    return validate_intent_payload(partial_payload)
 
 
 def extract_local_intent_fields(message: str) -> dict:
@@ -165,12 +165,11 @@ def merge_local_intent_fields(intent_payload: dict, message: str) -> dict:
 
 
 def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:
-    missing_fields = intent_payload.get("missingFields") or missing_required_intent_fields(
-        intent_payload
-    )
-    if intent_payload.get("status") == "needs_input" or missing_fields:
+    intent_payload = normalize_intent_payload(intent_payload)
+    invalid_fields = invalid_intent_fields(intent_payload)
+    if intent_payload.get("status") == "needs_input" or invalid_fields:
         raise IntentClarificationRequired(
-            missing_fields,
+            invalid_fields,
             intent_payload.get("partialPayload") or partial_intent_payload(intent_payload),
             intent_payload.get("message"),
         )
@@ -187,6 +186,48 @@ def validate_intent_payload(intent_payload: dict) -> PimActivationRequest:
             raise IntentClarificationRequired(missing_fields, intent_payload) from exc
 
         raise
+
+
+def normalize_intent_payload(intent_payload: dict) -> dict:
+    normalized_payload = dict(intent_payload)
+    role_name = normalized_payload.get("roleName")
+    if isinstance(role_name, str):
+        canonical_role_name = next(
+            (
+                allowed_role_name
+                for allowed_role_name in settings.allowed_role_names()
+                if allowed_role_name.lower() == role_name.strip().lower()
+            ),
+            None,
+        )
+        if canonical_role_name:
+            normalized_payload["roleName"] = canonical_role_name
+
+    return normalized_payload
+
+
+def invalid_intent_fields(intent_payload: dict) -> list[str]:
+    invalid_fields = missing_required_intent_fields(intent_payload)
+
+    role_name = intent_payload.get("roleName")
+    if role_name and role_name not in settings.allowed_role_names():
+        invalid_fields.append("roleName")
+
+    duration_hours = intent_payload.get("durationHours")
+    if duration_hours is not None:
+        try:
+            duration_value = int(duration_hours)
+        except (TypeError, ValueError):
+            invalid_fields.append("durationHours")
+        else:
+            if duration_value < 1 or duration_value > settings.max_pim_duration_hours:
+                invalid_fields.append("durationHours")
+
+    ticket_number = intent_payload.get("ticketNumber")
+    if ticket_number and not str(ticket_number).strip().startswith("#"):
+        invalid_fields.append("ticketNumber")
+
+    return list(dict.fromkeys(invalid_fields))
 
 
 def missing_required_intent_fields(intent_payload: dict) -> list[str]:

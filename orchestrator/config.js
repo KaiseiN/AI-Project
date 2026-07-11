@@ -5,5 +5,5 @@ window.PIM_ORCHESTRATOR_CONFIG = {
   intentUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/intent/extract",
   functionUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/pim/activate",
   redirectUri: "https://yellow-mushroom-01855d00f.7.azurestaticapps.net/",
-  supportedRoles: ["AI Reader"]
+  supportedRoles: ["AI Reader", "Security Reader"]
 };

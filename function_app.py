@@ -72,7 +72,7 @@ def build_orchestrator_config(req: func.HttpRequest) -> str:
         "intentUrl": f"{origin}/api/intent/extract",
         "functionUrl": f"{origin}/api/pim/activate",
         "redirectUri": redirect_uri,
-        "supportedRoles": ["AI Reader"],
+        "supportedRoles": ["AI Reader", "Security Reader"],
     }
     return f"window.PIM_ORCHESTRATOR_CONFIG = {json.dumps(config, indent=2)};\n"
 
@@ -99,8 +99,7 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
             {
                 "status": "needs_input",
                 "message": normalize_clarification_message(
-                    exc.clarification_message
-                    or build_clarification_message(exc.missing_fields, exc.partial_payload)
+                    build_clarification_message(exc.missing_fields, exc.partial_payload)
                 ),
                 "missingFields": exc.missing_fields,
                 "partialPayload": exc.partial_payload,
@@ -133,35 +132,16 @@ async def extract_intent(req: func.HttpRequest) -> func.HttpResponse:
 
 
 def build_clarification_message(missing_fields: list[str], partial_payload: dict) -> str:
-    lines = []
-    if len(missing_fields) == 1:
-        lines.append(f"Missing required field: {missing_fields[0]}.")
-    else:
-        lines.append(f"Missing required fields: {', '.join(missing_fields)}.")
-
-    lines.extend(["", "Please reply with:"])
+    lines = ["Please correct the following:"]
 
     if "ticketNumber" in missing_fields:
-        lines.append("")
-        lines.append('ticketNumber (must start with "#", e.g., #12345)')
-        lines.append("optional justification (if omitted, I'll use the ticket number)")
+        lines.append('- ticket number must start with "#", for example #12345.')
 
     if "roleName" in missing_fields:
-        lines.append("")
-        lines.append(f"roleName ({', '.join(settings.allowed_role_names())})")
+        lines.append(f"- role must be one of: {', '.join(settings.allowed_role_names())}.")
 
     if "durationHours" in missing_fields:
-        lines.append("")
-        lines.append(f"durationHours (1-{settings.max_pim_duration_hours})")
-
-    if partial_payload:
-        lines.extend(
-            [
-                "",
-                "Current request details:",
-                json.dumps(partial_payload, indent=2),
-            ]
-        )
+        lines.append(f"- duration must be 1-{settings.max_pim_duration_hours} hours.")
 
     return "\n".join(lines)
 

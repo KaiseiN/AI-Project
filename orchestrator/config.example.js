@@ -5,5 +5,5 @@ window.PIM_ORCHESTRATOR_CONFIG = {
   intentUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/intent/extract",
   functionUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/pim/activate",
   redirectUri: "http://localhost:8000/orchestrator/",
-  supportedRoles: ["AI Reader"]
+  supportedRoles: ["AI Reader", "Security Reader"]
 };
