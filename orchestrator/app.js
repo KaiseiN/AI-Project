@@ -333,7 +333,7 @@
       return body.message;
     }
 
-    if (status === 201 && body && body.status === "Provisioned") {
+    if (isSuccessfulActivationResponse(status, body)) {
       return [
         `${currentPayload.roleName} is active for ${currentPayload.durationHours} ` +
           `${currentPayload.durationHours === 1 ? "hour" : "hours"} using ${currentPayload.ticketNumber}.`,
@@ -344,6 +344,18 @@
     }
 
     return JSON.stringify({ status, body }, null, 2);
+  }
+
+  function isSuccessfulActivationResponse(status, body) {
+    if (status < 200 || status >= 300 || !body || typeof body !== "object") {
+      return false;
+    }
+
+    return (
+      body.status === "Provisioned" ||
+      body.action === "selfActivate" ||
+      Boolean(body.roleDefinitionId && body.targetScheduleId)
+    );
   }
 
   async function sha256Base64Url(value) {
