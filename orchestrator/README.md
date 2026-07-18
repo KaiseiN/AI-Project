@@ -1,11 +1,11 @@
 # PIM Activation Orchestrator
 
-Browser-based orchestrator for the permanent architecture:
+Browser-based UI for the permanent architecture:
 
 ```text
 User signs in with Entra ID
   -> App gets a user access token for the Function API
-  -> App extracts role/duration/ticket intent
+  -> App asks the Function App to extract role/duration/ticket intent
   -> App calls the deployed Azure Function with the user token
   -> Function performs OBO and activates PIM
 ```
@@ -29,17 +29,19 @@ tenantId: "a373f986-e6fe-48b3-8acd-d9cc4dbdb2e6"
 clientId: "2d927dbc-e54f-4e43-a1d9-ab9988006dc6"
 apiScope: "api://2450d4e7-7781-4a1f-885b-710a17d3d31b/pim.activate"
 functionUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/pim/activate"
+intentUrl: "https://knakano-ai-project-app-h9cxeyfufqdhahcx.eastus2-01.azurewebsites.net/api/intent/extract"
 ```
 
 ## Entra Redirect URI
 
-Add this redirect URI to the local client app registration as a **Single-page application (SPA)** redirect URI:
+Add these redirect URIs to the local client app registration as **Single-page application (SPA)** redirect URIs:
 
 ```text
+https://yellow-mushroom-01855d00f.7.azurestaticapps.net
 http://localhost:8000/orchestrator/
 ```
 
-If you use another port, add that exact URL instead.
+If you use another local port, add that exact URL instead.
 
 ## Run Locally
 
@@ -82,7 +84,7 @@ For Foundry mode, add these settings to the deployed Azure Function App:
 FOUNDRY_INTENT_MODE=foundry
 FOUNDRY_PROJECT_ENDPOINT=https://knakano-test.services.ai.azure.com/api/projects/knakano-test
 FOUNDRY_AGENT_NAME=PIM-Activation
-FOUNDRY_AGENT_VERSION=5
+FOUNDRY_AGENT_VERSION=9
 FOUNDRY_MANAGED_IDENTITY_CLIENT_ID=c8931a20-cb95-4721-9fa1-16a3e555f952
 FOUNDRY_TOKEN_SCOPE=https://ai.azure.com/.default
 ```
