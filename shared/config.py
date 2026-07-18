@@ -38,7 +38,6 @@ class Settings:
         self._role_map = {
             "AI Reader": "1fe13547-53f6-408d-ac04-7f8eed167b38",
             "Security Reader": "5d6b6bb7-de71-4623-b4af-96380a352509",
-            "User Administrator": "fe930be7-5e62-47db-91af-98c3a49a38b1",
         }
 
     def role_definition_id(self, role_name: str) -> str | None:
